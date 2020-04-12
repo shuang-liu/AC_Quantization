@@ -222,7 +222,7 @@ def getClosest(newColor, colors):
             retPos = pos
     return retColor, retPos, minDis
 
-def getCenters(colors, candidates, nsweeps):
+def getCenters(colors, candidates, nattempts):
     colors = np.reshape(colors, (-1, 3))
     size = len(candidates)
     retCenters = None
@@ -232,7 +232,7 @@ def getCenters(colors, candidates, nsweeps):
             color, pos, dis = getClosest(color, candidates)
             counts[pos] += 1
     counts = np.array(counts)
-    for k_means_sweep in range(nsweeps):
+    for k_means_attempt in range(nattempts):
         indices = np.random.choice(size, 15, p = counts / counts.sum())
         centers = candidates[indices]
         previousTotDis = float('inf')
@@ -262,7 +262,7 @@ def getCenters(colors, candidates, nsweeps):
                 previousTotDis = currentTotDis
             else:
                 break
-        print("sweep:", str(k_means_sweep + 1) + "/10", "loss:", currentTotDis)
+        print("attempt:", str(k_means_attempt + 1) + "/10", "loss:", currentTotDis)
         if currentTotDis < minTotDis:
             minTotDis = currentTotDis
             retCenters = copy.copy(centers)
@@ -283,7 +283,7 @@ def main():
     parser.add_argument('nrows', type = int, help = 'number of rows')
     parser.add_argument('ncols', type = int, help = 'number of columns')
     parser.add_argument('filename', type = str, help = 'filename for the input image')
-    parser.add_argument('--nsweeps', type = int, default = 10, help = 'number of k-means sweeps')
+    parser.add_argument('--nattempts', type = int, default = 10, help = 'number of k-means attempts')
 
     args = parser.parse_args()
 
@@ -294,7 +294,7 @@ def main():
     newImage = skimage.transform.resize(image, (nrows * 32, ncols * 32))
 
     colorTable = getColorMap() # colorTable: list of (color, label)
-    centers = getCenters(newImage, np.array([color for (color, label) in colorTable]), args.nsweeps) # centers: list of color
+    centers = getCenters(newImage, np.array([color for (color, label) in colorTable]), args.nattempts) # centers: list of color
     paletteList = getPalette(centers, colorTable) # paletteList: list of (color, label)
 
     palette = ""
