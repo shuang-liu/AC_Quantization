@@ -1,3 +1,4 @@
+import argparse
 import pyqrcode
 import skimage.transform
 import skimage.io
@@ -221,7 +222,7 @@ def getClosest(newColor, colors):
             retPos = pos
     return retColor, retPos, minDis
 
-def getCenters(colors, candidates):
+def getCenters(colors, candidates, nsweeps):
     colors = np.reshape(colors, (-1, 3))
     size = len(candidates)
     retCenters = None
@@ -231,7 +232,7 @@ def getCenters(colors, candidates):
             color, pos, dis = getClosest(color, candidates)
             counts[pos] += 1
     counts = np.array(counts)
-    for k_means_trial in range(10):
+    for k_means_sweep in range(nsweeps):
         indices = np.random.choice(size, 15, p = counts / counts.sum())
         centers = candidates[indices]
         previousTotDis = float('inf')
@@ -261,7 +262,7 @@ def getCenters(colors, candidates):
                 previousTotDis = currentTotDis
             else:
                 break
-        print("trial:", k_means_trial, "loss:", currentTotDis)
+        print("sweep:", str(k_means_sweep + 1) + "/10", "loss:", currentTotDis)
         if currentTotDis < minTotDis:
             minTotDis = currentTotDis
             retCenters = copy.copy(centers)
@@ -277,14 +278,23 @@ def getPalette(centers, colorTable):
 
 def main():
 
-    nrows = 1
-    ncols = 1
+    parser = argparse.ArgumentParser()
 
-    image = skimage.io.imread(fname = "wallpaper.jpg")
+    parser.add_argument('nrows', type = int, help = 'number of rows')
+    parser.add_argument('ncols', type = int, help = 'number of columns')
+    parser.add_argument('filename', type = str, help = 'filename for the input image')
+    parser.add_argument('--nsweeps', type = int, default = 10, help = 'number of k-means sweeps')
+
+    args = parser.parse_args()
+
+    nrows = args.nrows
+    ncols = args.ncols
+
+    image = skimage.io.imread(args.filename)
     newImage = skimage.transform.resize(image, (nrows * 32, ncols * 32))
 
     colorTable = getColorMap() # colorTable: list of (color, label)
-    centers = getCenters(newImage, np.array([color for (color, label) in colorTable])) # centers: list of color
+    centers = getCenters(newImage, np.array([color for (color, label) in colorTable]), args.nsweeps) # centers: list of color
     paletteList = getPalette(centers, colorTable) # paletteList: list of (color, label)
 
     palette = ""
@@ -295,7 +305,9 @@ def main():
         for j in range(ncols * 32):
             newImage[i][j], _, _ = getClosest(newImage[i][j], [color for (color, label) in paletteList])
 
-    prefix = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001931"
+    #prefix = "410043005000610074007400650072006E004D0061006B00650072000000000000000000000000000000B6EC530061006D00000000000000000000000000000044C547006900740068007500620000000000000000001931"
+    #prefix =  "410043005000610074007400650072006E004D0061006B00650000000000000000000000000000000000B6EC530061006D00000000000000000000000000000044C547006900740068007500620000000000000000001931"
+    prefix = "4026C4E00410000000000000000000000000000000000000000000000000000000000000000000000000B6EC4E0041000000000000000000000000000000000044C54E004100000000000000000000000000000000001931"
 
     interfix = "cc0a090000"
 
