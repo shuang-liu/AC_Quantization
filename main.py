@@ -1,7 +1,6 @@
+from PIL import Image
 import argparse
 import pyqrcode
-import skimage.transform
-import skimage.io
 import numpy as np
 import numpy.random
 import copy
@@ -202,10 +201,10 @@ def getColorMap():
     colorTable = []
     for color, label in colorList:
 
-        red = int(color[0:2], 16) / 255.0
-        green = int(color[2:4], 16) / 255.0
-        blue = int(color[4:6], 16) / 255.0
-        colorTable.append((np.array([red, green, blue]), label))
+        red = int(color[0:2], 16)
+        green = int(color[2:4], 16)
+        blue = int(color[4:6], 16)
+        colorTable.append((np.array([red, green, blue], dtype = np.int), label))
 
     return colorTable
 
@@ -275,18 +274,21 @@ def main():
     parser.add_argument('nrows', type = int, help = 'number of rows')
     parser.add_argument('ncols', type = int, help = 'number of columns')
     parser.add_argument('filename', type = str, help = 'filename for the input image')
-    parser.add_argument('--nattempts', type = int, default = 10, help = 'number of k-means attempts')
+    parser.add_argument('--nattempts', type = int, default = 20, help = 'number of k-means attempts')
 
     args = parser.parse_args()
 
     nrows = args.nrows
     ncols = args.ncols
 
-    image = skimage.io.imread(args.filename)
-    newImage = skimage.transform.resize(image, (nrows * 32, ncols * 32))
+    image = Image.open(args.filename)
+
+    resizedImage = np.array(image.resize((ncols * 32, nrows * 32), resample = Image.LANCZOS), dtype = np.int)
+    newImage = copy.copy(resizedImage)
 
     colorTable = getColorMap() # colorTable: list of (color, label)
-    centers = getCenters(newImage, np.array([color for (color, label) in colorTable]), args.nattempts) # centers: list of color
+    allColors = np.array([color for (color, label) in colorTable], dtype = np.int)
+    centers = getCenters(resizedImage, allColors, args.nattempts) # centers: list of color
     paletteList = getPalette(centers, colorTable) # paletteList: list of (color, label)
 
     palette = ""
@@ -318,29 +320,33 @@ def main():
             code = pyqrcode.QRCode(byteArray, error = 'M')
             tmpFilename = "qrcode_" + str(row) + "_" + str(col) + ".png"
             code.png(tmpFilename)
-            qrVec[row][col] = skimage.io.imread(tmpFilename)
+            qrVec[row][col] = np.array(Image.open(tmpFilename), dtype = np.int)
             os.remove(tmpFilename)
 
     padding = 6
-    qrHeight = len(qrVec[row][col])
-    qrWidth = len(qrVec[row][col][0])
-    preview = np.ones((nrows * 32 + (nrows - 1) * padding, ncols * 32 + (ncols - 1) * padding, 3))
-    qrcodes = np.ones((nrows * qrHeight + (nrows - 1) * padding, ncols * qrWidth + (ncols - 1) * padding)) * 255
+    qrSize = len(qrVec[row][col])
+    preview = np.ones((nrows * 32 + (nrows - 1) * padding, ncols * 32 + (ncols - 1) * padding, 3), dtype = np.int) * 255
+    debug = np.ones((nrows * 32 + (nrows - 1) * padding, ncols * 32 + (ncols - 1) * padding, 3), dtype = np.int) * 255
+    qrcodes = np.ones((nrows * qrSize + (nrows - 1) * padding, ncols * qrSize + (ncols - 1) * padding), dtype = np.int)
 
     for row in range(nrows):
         for col in range(ncols):
             for i in range(0, 32):
                 for j in range(0, 32):
                     preview[row * (32 + padding) + i][col * (32 + padding) + j] = newImage[row * 32 + i][col * 32 + j]
+                    debug[row * (32 + padding) + i][col * (32 + padding) + j], _, _ = getClosest(resizedImage[row * 32 + i][col * 32 + j], allColors)
 
     for row in range(nrows):
         for col in range(ncols):
-            for i in range(0, qrHeight):
-                for j in range(0, qrWidth):
-                    qrcodes[row * (qrHeight + padding) + i][col * (qrWidth + padding) + j] = qrVec[row][col][i][j]
+            for i in range(0, qrSize):
+                for j in range(0, qrSize):
+                    qrcodes[row * (qrSize + padding) + i][col * (qrSize + padding) + j] = qrVec[row][col][i][j]
 
-    skimage.io.imsave('preview.png', preview)
-    skimage.io.imsave('qrcodes.png', qrcodes)
+    preview = np.repeat(preview, 10, axis = 0)
+    preview = np.repeat(preview, 10, axis = 1)
+    Image.fromarray(preview.astype(np.uint8)).save('preview.png')
+    #Image.fromarray(debug.astype(np.uint8)).save('debug.png')
+    Image.fromarray((qrcodes * 255).astype(np.uint8)).save('qrcodes.png')
 
 
 if __name__ ==  '__main__':
