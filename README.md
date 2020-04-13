@@ -2,9 +2,9 @@
 
 ## Example
 
-`python3 main.py 2 3 wave.jpg`
+Running `python3 main.py 2 3 wave.jpg` will generate two files: preview.png and qrcodes.png.
 
-![wave.jpg](examples/wave.jpg?raw=true)*wave.jpg.png*
+![wave.jpg](examples/wave.jpg?raw=true)*wave.jpg*
 
 ![preview.png](examples/preview.png?raw=true)*preview.png*
 
