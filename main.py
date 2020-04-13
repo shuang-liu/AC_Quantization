@@ -5,6 +5,7 @@ import skimage.io
 import numpy as np
 import numpy.random
 import copy
+import os
 
 eps = 1e-9
 
@@ -208,19 +209,10 @@ def getColorMap():
 
     return colorTable
 
-def getDis(color1, color2):
-    return np.dot((color1- color2) ** 2, (1, 1, 1))
-
-
 def getClosest(newColor, colors):
-    minDis = float('inf')
-    for pos, color in enumerate(colors):
-        newDis = getDis(newColor, color)
-        if  newDis < minDis:
-            minDis = newDis
-            retColor = color
-            retPos = pos
-    return retColor, retPos, minDis
+    disVec = np.sum((newColor - colors) ** 2, axis = 1)
+    pos = np.argmin(disVec)
+    return colors[pos], pos, np.sum((newColor - colors[pos]) ** 2)
 
 def getCenters(colors, candidates, nattempts):
     colors = np.reshape(colors, (-1, 3))
@@ -311,6 +303,7 @@ def main():
     prefix = title + "0000b6ec" + author + "000044c5" + place + "00001931"
 
     interfix = "cc0a090000"
+    qrVec = [[None] * ncols for _ in range(nrows)]
 
     for row in range(nrows):
         for col in range(ncols):
@@ -323,7 +316,31 @@ def main():
                     canvas = canvas + hex(index)[2:]
             byteArray = hexToByte(prefix + palette + interfix + canvas)
             code = pyqrcode.QRCode(byteArray, error = 'M')
-            code.png("qrcode_" + str(row) + "_" + str(col) + ".png")
+            tmpFilename = "qrcode_" + str(row) + "_" + str(col) + ".png"
+            code.png(tmpFilename)
+            qrVec[row][col] = skimage.io.imread(tmpFilename)
+            os.remove(tmpFilename)
+
+    padding = 6
+    qrHeight = len(qrVec[row][col])
+    qrWidth = len(qrVec[row][col][0])
+    preview = np.ones((nrows * 32 + (nrows - 1) * padding, ncols * 32 + (ncols - 1) * padding, 3))
+    qrcodes = np.ones((nrows * qrHeight + (nrows - 1) * padding, ncols * qrWidth + (ncols - 1) * padding)) * 255
+
+    for row in range(nrows):
+        for col in range(ncols):
+            for i in range(0, 32):
+                for j in range(0, 32):
+                    preview[row * (32 + padding) + i][col * (32 + padding) + j] = newImage[row * 32 + i][col * 32 + j]
+
+    for row in range(nrows):
+        for col in range(ncols):
+            for i in range(0, qrHeight):
+                for j in range(0, qrWidth):
+                    qrcodes[row * (qrHeight + padding) + i][col * (qrWidth + padding) + j] = qrVec[row][col][i][j]
+
+    skimage.io.imsave('preview.png', preview)
+    skimage.io.imsave('qrcodes.png', qrcodes)
 
 
 if __name__ ==  '__main__':
