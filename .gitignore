@@ -29,7 +29,7 @@
 *.webp
 
 # Portable Network Graphics
-#*.png
+*.png
 
 # Animated Portable Network Graphics
 *.apng
@@ -61,3 +61,5 @@
 # 3D Images
 *.3dm
 *.max
+
+!examples/*
