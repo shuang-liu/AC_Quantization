@@ -194,13 +194,10 @@ def getColorMap():
                     ("363636", "bf"),
                     ("242424", "cf"),
                     ("121212", "df"),
-                    ("000000", "ef")
-
-                ]
+                    ("000000", "ef")]
 
     colorTable = []
     for color, label in colorList:
-
         red = int(color[0:2], 16)
         green = int(color[2:4], 16)
         blue = int(color[4:6], 16)
@@ -209,9 +206,10 @@ def getColorMap():
     return colorTable
 
 def getClosest(newColor, colors):
-    disVec = np.sum((newColor - colors) ** 2, axis = 1)
+    weights = np.array([1, 1, 1])
+    disVec = np.dot((newColor - colors) ** 2, weights)
     pos = np.argmin(disVec)
-    return colors[pos], pos, np.sum((newColor - colors[pos]) ** 2)
+    return colors[pos], pos, np.dot((newColor - colors[pos]) ** 2, weights)
 
 def getCenters(colors, candidates, nattempts):
     colors = np.reshape(colors, (-1, 3))
@@ -253,11 +251,12 @@ def getCenters(colors, candidates, nattempts):
                 previousTotDis = currentTotDis
             else:
                 break
-        print("attempt:", str(k_means_attempt + 1) + "/10", "loss:", currentTotDis)
+        print("attempt:", str(k_means_attempt + 1) + "/" + str(nattempts), "loss:", currentTotDis)
         if currentTotDis < minTotDis:
             minTotDis = currentTotDis
             retCenters = copy.copy(centers)
 
+    print(minTotDis)
     return retCenters
 
 def getPalette(centers, colorTable):
@@ -345,7 +344,7 @@ def main():
     preview = np.repeat(preview, 10, axis = 0)
     preview = np.repeat(preview, 10, axis = 1)
     Image.fromarray(preview.astype(np.uint8)).save('preview.png')
-    #Image.fromarray(debug.astype(np.uint8)).save('debug.png')
+    Image.fromarray(debug.astype(np.uint8)).save('debug.png')
     Image.fromarray((qrcodes * 255).astype(np.uint8)).save('qrcodes.png')
 
 
