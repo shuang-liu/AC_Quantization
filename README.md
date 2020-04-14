@@ -1,6 +1,6 @@
 # AC_Quantization
 
-## Example
+## Examples
 
 Running `python3 main.py n m input.jpg` will generate two files: preview.png and qrcodes.png.
 
