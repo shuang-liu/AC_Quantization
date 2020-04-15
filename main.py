@@ -222,8 +222,24 @@ def getCenters(colors, candidates, nattempts):
             counts[pos] += 1
     counts = np.array(counts)
     for k_means_attempt in range(nattempts):
-        indices = np.random.choice(size, 15, p = counts / counts.sum())
+        probs = counts / counts.sum()
+
+        #random initialization
+        """
+        indices = np.random.choice(size, 15, p = probs, replace = False)
         centers = candidates[indices]
+        """
+
+        #k-means++-type initialization
+        centers = []
+        for i in range(15):
+            centers.append(candidates[np.random.choice(size, 1, p = probs)[0]])
+            for s in range(size):
+                _, _, dis = getClosest(candidates[s], np.array(centers))
+                probs[s] = dis
+            probs = probs / probs.sum()
+        centers = np.array(centers)
+
         previousTotDis = float('inf')
         while True:
             buckets = [[] for i in range(15)]
@@ -273,7 +289,7 @@ def main():
     parser.add_argument('nrows', type = int, help = 'number of rows')
     parser.add_argument('ncols', type = int, help = 'number of columns')
     parser.add_argument('filename', type = str, help = 'filename for the input image')
-    parser.add_argument('--nattempts', type = int, default = 20, help = 'number of k-means attempts')
+    parser.add_argument('--nattempts', type = int, default = 100, help = 'number of k-means attempts')
 
     args = parser.parse_args()
 
@@ -282,7 +298,7 @@ def main():
 
     image = Image.open(args.filename)
 
-    resizedImage = np.array(image.resize((ncols * 32, nrows * 32), resample = Image.LANCZOS), dtype = np.int)
+    resizedImage = np.array(image.resize((ncols * 32, nrows * 32), resample = Image.BICUBIC), dtype = np.int)
     newImage = copy.copy(resizedImage)
 
     colorTable = getColorMap() # colorTable: list of (color, label)
