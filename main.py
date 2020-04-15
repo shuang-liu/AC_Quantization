@@ -222,7 +222,8 @@ def getCenters(colors, candidates, nattempts):
             counts[pos] += 1
     counts = np.array(counts)
     for k_means_attempt in range(nattempts):
-        probs = counts / counts.sum()
+        currentCounts = copy.copy(counts)
+        probs = currentCounts / currentCounts.sum()
 
         #random initialization
         """
@@ -233,10 +234,13 @@ def getCenters(colors, candidates, nattempts):
         #k-means++-type initialization
         centers = []
         for i in range(15):
-            centers.append(candidates[np.random.choice(size, 1, p = probs)[0]])
+            chosen = np.random.choice(size, 1, p = probs)[0]
+            centers.append(candidates[chosen])
+            currentCounts[chosen] -= 1
+            probs = copy.copy(currentCounts)
             for s in range(size):
                 _, _, dis = getClosest(candidates[s], np.array(centers))
-                probs[s] = dis
+                probs[s] *= dis
             probs = probs / probs.sum()
         centers = np.array(centers)
 
