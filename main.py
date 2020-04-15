@@ -298,7 +298,7 @@ def main():
 
     image = Image.open(args.filename)
 
-    resizedImage = np.array(image.resize((ncols * 32, nrows * 32), resample = Image.BICUBIC), dtype = np.int)
+    resizedImage = np.array(image.resize((ncols * 32, nrows * 32), resample = Image.LANCZOS), dtype = np.int)
     newImage = copy.copy(resizedImage)
 
     colorTable = getColorMap() # colorTable: list of (color, label)
