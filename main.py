@@ -213,34 +213,32 @@ def getClosest(newColor, colors):
 
 def getCenters(colors, candidates, nattempts):
     colors = np.reshape(colors, (-1, 3))
-    size = len(candidates)
     retCenters = None
     minTotDis = float('inf')
-    counts = [0] * size
-    for color in colors:
-            color, pos, dis = getClosest(color, candidates)
-            counts[pos] += 1
-    counts = np.array(counts)
     for k_means_attempt in range(nattempts):
-        currentCounts = copy.copy(counts)
-        probs = currentCounts / currentCounts.sum()
 
         #random initialization
         """
-        indices = np.random.choice(size, 15, p = probs, replace = False)
+        size = len(candidates)
+        counts = [0] * size
+        for color in colors:
+                color, pos, dis = getClosest(color, candidates)
+                counts[pos] += 1
+        counts = np.array(counts)
+        indices = np.random.choice(size, 15, p = counts / counts.sum(), replace = False)
         centers = candidates[indices]
         """
 
         #k-means++-type initialization
         centers = []
+        size = len(colors)
+        probs = np.array([1.0 / size] * size)
         for i in range(15):
             chosen = np.random.choice(size, 1, p = probs)[0]
-            centers.append(candidates[chosen])
-            currentCounts[chosen] -= 1
-            probs = copy.copy(currentCounts)
+            centers.append(getClosest(colors[chosen], candidates)[0])
             for s in range(size):
-                _, _, dis = getClosest(candidates[s], np.array(centers))
-                probs[s] *= dis
+                _, _, dis = getClosest(colors[s], np.array(centers))
+                probs[s] = dis
             probs = probs / probs.sum()
         centers = np.array(centers)
 
